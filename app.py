@@ -25,23 +25,32 @@ def most_prolific():
 
 def sim_pearson(person_a,person_b):
     """
-    define the pearson similarity between two people
-    across mutliple dimensions
+    the pearson similarity between two people
+    across mutliple common dimensions
     """
     
+    #first, get the intersection between two preference matrixes, used to filer all calculation
     commonality = Set([title_id for title_id in person_a.keys()]).intersection([title_id for title_id in person_b.keys()])
+
     n = len(commonality)
     if n == 0:
         return 0
 
+    #Sum the overall ratings domain
     person_a_sum = sum([rate for key,rate in person_a.items() if key in commonality])
     person_b_sum = sum([rate for key,rate in person_b.items() if key in commonality])
 
+    #Sum the squares of the overall ratings domain
     person_a_square = sum([pow(rate,2) for key,rate in person_a.items() if key in commonality])
     person_b_square = sum([pow(rate,2) for key,rate in person_b.items() if key in commonality])
     
+    #Sum the products of person_a's score for a title and person_b's score for a title
     pSum = sum([person_a[key]*person_b[key] for key in person_a.keys() if key in commonality])
+    
+    #Subtract the overall positivity over the size of the domain from the product sum
     num = pSum-(person_a_sum*person_b_sum/n)
+
+    #Calculate the pt density of all plotted domains
     density = sqrt((person_a_square-pow(person_a_sum,2)/n) * (person_b_square-pow(person_b_sum,2)/n))
     if density == 0:
         return 0
