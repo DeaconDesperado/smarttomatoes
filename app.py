@@ -18,26 +18,10 @@ from models import *
 
 def most_prolific():
     critics = Critic.collection.find().sort('prevalence',-1).limit(20)
-    common = Set()
-    crits = Set()
+    recs = {}
     for critic in critics:
-        if len(common) == 0:
-            common = Set([x['movie_id'] for x in critic.ratings])
-        elif len(common) < 6:
-            break
-        else:
-            common = common.intersection(Set([x['movie_id'] for x in critic.ratings]))
-        crits.add(critic)
-
-    mapped = dict()
-    for crit in crits:
-        recs = crit.get_ratings()
-        mapped[crit._id] = {}
-        for key in common:
-            mapped[crit._id][key] = recs[key]
-
-    return mapped
-
+        recs[critic._id] = critic.get_ratings()
+    return recs 
 
 def sim_pearson(person_a,person_b):
     """
@@ -45,16 +29,18 @@ def sim_pearson(person_a,person_b):
     across mutliple dimensions
     """
     
-    #for this iteration, only consider common elements
-    n = len(person_a)
+    commonality = Set([title_id for title_id in person_a.keys()]).intersection([title_id for title_id in person_b.keys()])
+    n = len(commonality)
+    if n == 0:
+        return 0
 
-    person_a_sum = sum(person_a.values())
-    person_b_sum = sum(person_b.values())
+    person_a_sum = sum([rate for key,rate in person_a.items() if key in commonality])
+    person_b_sum = sum([rate for key,rate in person_b.items() if key in commonality])
 
-    person_a_square = sum([pow(val,2) for val in person_a.values()])
-    person_b_square = sum([pow(val,2) for val in person_b.values()])
+    person_a_square = sum([pow(rate,2) for key,rate in person_a.items() if key in commonality])
+    person_b_square = sum([pow(rate,2) for key,rate in person_b.items() if key in commonality])
     
-    pSum = sum([person_a[key]*person_b[key] for key in person_a.keys()])
+    pSum = sum([person_a[key]*person_b[key] for key in person_a.keys() if key in commonality])
     num = pSum-(person_a_sum*person_b_sum/n)
     density = sqrt((person_a_square-pow(person_a_sum,2)/n) * (person_b_square-pow(person_b_sum,2)/n))
     if density == 0:
@@ -63,14 +49,21 @@ def sim_pearson(person_a,person_b):
     return r
     
 
+def listMatches(pref_mapping,person_name,n=20,sim_func=sim_pearson):
+    scores = [(sim_func(pref_mapping[person_name],other),other_name) for other_name,other in pref_mapping.items() if other_name!=person_name]
+    scores.sort()
+    scores.reverse()
+    return scores
+
 def main():
     if not checkCache():
         buildCache()
         makeCritics()
     mapped = most_prolific()
     for key in mapped:
-        others = [other_key for other_key in mapped.keys() if other_key != key]
-        for next in others:
-            print '%s->%s = %s' % (key,next,sim_pearson(mapped[key],mapped[next]))
+        scores = listMatches(mapped,key)
+        print key
+        for answer in scores:
+            print '\t%s: %s' % answer
 
 main()
