@@ -8,12 +8,6 @@ from pymongo.errors import DuplicateKeyError
 
 rtapi = RT(Config.API_KEY)
 
-def mongo_config(config,prefix='MONGODB_'):
-    attrs = config.__dict__.iteritems()
-    attrs = ((attr.replace(prefix, '').lower(), value)
-             for attr, value in attrs if attr.startswith(prefix))
-    minimongo.configure(**dict(attrs))
-mongo_config(Config)
 
 class Critic(Model):
     class Meta:
@@ -26,6 +20,20 @@ class Critic(Model):
     def create(cls,data):
         return Critic(data)
 
+    def get_ratings(self):
+        return dict([(r['movie_id'],r['rating']) for r in self.ratings])
+
+    def __hash__(self):
+        return hash('%s-%s' % (self._id,len(self.ratings)))
+
+    def __eq__(self,other):
+        try:
+            this = '%s-%s'%(self._id,len(self.ratings))
+            that = '%s-%s'%(other._id,len(other.ratings))
+            return this==that
+        except AttributeError:
+            return False
+
 class Movie(Model):
     class Meta:
         collection = 'movies'
@@ -36,6 +44,17 @@ class Movie(Model):
         movie['_id'] = movie['id']
         print 'Saving %s id %s' % (movie['title'], movie['_id'])
         return Movie(movie)
+
+    def __hash__(self):
+        return hash('%s' % (self._id))
+
+    def __eq__(self,other):
+        try:
+            this = '%s' % (self._id)
+            that = '%s' % (other._id)
+            return this==that
+        except AttributeError:
+            return False
 
 
 class Review(Model):
@@ -49,7 +68,7 @@ class Review(Model):
     def create(cls,review,movie_id):
         review['movie_id'] = movie_id
         review = Review(review)
-        review.convert_rating()
+        review.rating = review.convert_rating()
         return review
 
     def convert_rating(self):
@@ -85,18 +104,17 @@ def buildCache():
                 except DuplicateKeyError:
                     continue
             sleep(1)
-    
+
+def makeCritics():
     for review in Review.collection.find():
-        critic = Critic.find_one({'_id':review['critic']})
+        critic = Critic.collection.find_one({'_id':review['critic']})
         if not critic:
             critic = Critic.create(dict(_id=review['critic']))
-        reviews = critic.get('ratings',{})
-        if review['movie_id'] not in reviews.keys():
-            reviews[review['movie_id']]=rating
-        critic['ratings'] = reviews
-        critic['prevalence'] = len(reviews)
-        critic.save(critic)
-        print '%s rated id %s %s' % (critic['_id'],review['movie_id'],rating)
-
+            critic.save()
+        review_slug = {'movie_id':review['movie_id'],'rating':review['rating']}
+        Critic.collection.update({'_id':review['critic']},{'$push':{'ratings':review_slug}})
+        critic = Critic.collection.find_one({'_id':review['critic']})
+        critic.prevalence = len(critic.ratings)
+        critic.save()
 
 
