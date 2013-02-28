@@ -6,6 +6,8 @@ from sets import Set
 from config import Config
 import minimongo
 from math import sqrt
+from flask import Flask,request
+from werkzeug.wrappers import Request,Response
 
 def mongo_config(config,prefix='MONGODB_'):
     attrs = config.__dict__.iteritems()
@@ -14,13 +16,14 @@ def mongo_config(config,prefix='MONGODB_'):
     minimongo.configure(**dict(attrs))
 
 mongo_config(Config)
+
 from models import *
 
 def most_prolific():
     critics = Critic.collection.find().sort('prevalence',-1).limit(20)
     recs = {}
     for critic in critics:
-        recs[critic._id] = critic.get_ratings()
+        recs[re.sub('\s+','_',critic._id.lower())] = critic.get_ratings()
     return recs 
 
 def sim_pearson(person_a,person_b):
@@ -64,15 +67,32 @@ def listMatches(pref_mapping,person_name,n=20,sim_func=sim_pearson):
     scores.reverse()
     return scores
 
-def main():
-    if not checkCache():
-        buildCache()
-        makeCritics()
-    mapped = most_prolific()
-    for key in mapped:
-        scores = listMatches(mapped,key)
-        print key
-        for answer in scores:
-            print '\t%s: %s' % answer
+if not checkCache():
+    buildCache()
+    makeCritics()
+mapped = most_prolific()
 
-main()
+app = Flask(__name__)
+
+@app.route('/')
+def root():
+    return Response('foo')
+
+@app.route('/<critic>')
+def critic(critic):
+    resp_string = json.dumps(mapped[critic],indent=4)
+    return Response(resp_string,mimetype='application/json')
+
+@app.route('/<critic>/similarity')
+def critic_similarity_matrix(critic):
+    resp_string = json.dumps(dict([(key,value) for value,key in listMatches(mapped,critic)]),indent=4)
+    return Response(resp_string,mimetype='application/json')
+
+@app.route('/<critic>/<other_critic>')
+def compare(critic,other_critic):
+    matrix = dict([(key,value) for value,key in listMatches(mapped,critic)])
+    return Response(json.dumps(matrix[other_critic]),mimetype='application/json')
+
+if __name__ == '__main__':
+    app.debug = True
+    app.run()
