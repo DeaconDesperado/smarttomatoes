@@ -1,5 +1,4 @@
 import sys
-sys.path.append('./rottentomatoes')
 from rottentomatoes import RT
 import json
 import os
@@ -8,7 +7,7 @@ from time import sleep
 import math
 from pymongo import MongoClient
 from sets import Set
-
+from models import *
 API_KEY = 'xa8fauta39t6agk3m2x8m843'
 CACHE_SIZE = 50
 
