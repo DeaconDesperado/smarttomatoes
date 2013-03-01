@@ -9,3 +9,6 @@ Uses the Pearson Similarity Metric:
 
 Where x and y = the set of two individual's comparative ratings for titles.
 
+The service itself is wrapped inside a Tornado webserver.  A separate thread of execution periodically rebuilds the index and loads in into memory, keeping read perfomance consistent regardless of volume of requests.
+
+The pearson calculation is done in this background task and cached by critic name.
