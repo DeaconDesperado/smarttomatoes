@@ -17,7 +17,6 @@ next_index = Queue()
 def indexTask(queue,cancel):
     while not cancel.isSet():
         sleep(60)
-        print 'i am a thread'
         setup()
         queue.put(most_prolific())
 
@@ -25,7 +24,6 @@ def indexTask(queue,cancel):
 def rebuild():
     try:
         new_data = next_index.get_nowait()
-        print 'Rebuilt index'
         mapped = new_data
     except Empty:
         pass
