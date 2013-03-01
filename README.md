@@ -6,3 +6,6 @@ Uses the Pearson Similarity Metric:
 
 ![image](http://snips.deacondesperado.com/rtapi/pear.gif 'Pearson Metric')
 
+
+Where x and y = the set of two individual's comparative ratings for titles.
+
