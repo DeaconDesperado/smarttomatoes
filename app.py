@@ -60,7 +60,6 @@ def sim_pearson(person_a,person_b):
         return 0
     r = num/density
     return r
-    
 
 def listMatches(pref_mapping,person_name,n=20,sim_func=sim_pearson):
     scores = [(sim_func(pref_mapping[person_name],other),other_name) for other_name,other in pref_mapping.items() if other_name!=person_name]
@@ -74,6 +73,7 @@ if not checkCache():
 mapped = most_prolific()
 
 app = Flask(__name__)
+
 
 @app.route('/')
 def root():
@@ -94,20 +94,29 @@ def compare(critic,other_critic):
     matrix = dict([(key,value) for value,key in listMatches(mapped,critic)])
     return Response(json.dumps(matrix[other_critic]),mimetype='application/json')
 
+def getRecsWeighted(mapping,critic_name,sim_func=sim_pearson):
+    # (rating * critic similarity)/sum(critic_similarities for title) for weighted score
+    totals = {}
+    simSums = {}
+    for other in mapping:
+        if other == critic_name: continue
+
+        sim = sim_func(mapping[critic_name],mapping[other])
+        if sim == 0: continue
+        for item in mapping[other]:
+            if item not in mapping[critic_name]:
+                totals.setdefault(item,0)
+                totals[item]+=mapping[other][item]*sim
+                simSums.setdefault(item,0)
+                simSums[item]+=sim
+    rankings = dict([(item,(total/simSums[item])) for item,total in totals.items()])
+    return rankings
+
+
 @app.route('/<critic>/would_like')
 def would_like(critic):
-    critic_seen = Set([key for key in mapped[critic].keys()])
-    most_like = [matrix[1] for matrix in listMatches(mapped,critic,n=3)]
-    picked_critic = Critic.collection.find_one({'_id':re.sub('_',' ',random.choice(most_like)).title()})
-    other_reviews = Set([rev['movie_id'] for rev in picked_critic.ratings])
-    havent_seen = list(critic_seen - other_reviews)
-    movies = []
-    for i in xrange(int(request.values.get('num',3))):
-        title = random.choice(havent_seen)
-        movies.append(Movie.collection.find_one({'_id':title}))
-    return Response(json.dumps(movies,indent=4),mimetype='application/json')
-    
-
+    recommendations = getRecsWeighted(mapped,critic)
+    return Response(json.dumps(recommendations,indent=4),mimetype='application/json')
 
 if __name__ == '__main__':
     app.debug = True
