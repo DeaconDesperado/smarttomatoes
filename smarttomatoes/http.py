@@ -1,14 +1,35 @@
-from smarttomatoes import mapped,listMatches,getRecsWeighted
-from flask import Flask,request
+from smarttomatoes import listMatches,getRecsWeighted,setup,most_prolific
+from flask import Flask,request,g
 from werkzeug.wrappers import Request,Response
 import json
-
 from tornado.wsgi import WSGIContainer
-from tornado.ioloop import IOLoop
+from tornado.ioloop import IOLoop,PeriodicCallback
 from tornado.web import FallbackHandler, RequestHandler, Application
-
+from threading import Thread,Event
+from Queue import Queue,Empty
+from time import sleep
 app = Flask(__name__)
-print 'mapping recs'
+
+setup()
+mapped = most_prolific()
+next_index = Queue()
+
+def indexTask(queue,cancel):
+    while not cancel.isSet():
+        sleep(60)
+        print 'i am a thread'
+        setup()
+        queue.put(most_prolific())
+
+
+def rebuild():
+    try:
+        new_data = next_index.get_nowait()
+        print 'Rebuilt index'
+        mapped = new_data
+    except Empty:
+        pass
+    
 
 @app.route('/')
 def root():
@@ -42,4 +63,14 @@ application = Application([
 
 if __name__ == '__main__':
     application.listen(5000)
-    IOLoop.instance().start()
+    io = IOLoop.instance()
+    cancel = Event()
+    index_watcher = Thread(target=indexTask,args=(next_index,cancel))
+    index_watcher.start()
+    try:
+        PeriodicCallback(rebuild,1000,io).start()
+        io.start()
+    except KeyboardInterrupt,Exception:
+        print 'setting cancel event'
+        cancel.set()
+        #shutdown

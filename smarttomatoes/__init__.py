@@ -83,9 +83,8 @@ def getRecsWeighted(mapping,critic_name,sim_func=sim_pearson):
     return rankings
 
 
-if not checkCache():
-    buildCache()
-    makeCritics()
-mapped = most_prolific()
-
+def setup():
+    if not checkCache():
+        buildCache()
+        makeCritics()
 
