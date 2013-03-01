@@ -4,5 +4,5 @@ A simple POC using the Rotten Tomatoes API to compare Top Movie Critics and thei
 
 Uses the Pearson Similarity Metric:
 
-![image]('http://snips.deacondesperado.com/rtapi/pear.gif')
+![image](http://snips.deacondesperado.com/rtapi/pear.gif 'Pearson Metric')
 
