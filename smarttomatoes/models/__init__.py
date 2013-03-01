@@ -72,6 +72,7 @@ class Review(Model):
         return review
 
     def convert_rating(self):
+        #TODO: also calculate A-F ratings numerically as well
         return float(float(self['original_score'].split('/')[0])/4)
 
 
