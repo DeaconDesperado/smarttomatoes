@@ -1,13 +1,10 @@
 import sys
-import json
 import re
 from time import sleep
 from sets import Set
 from config import Config
 import minimongo
 from math import sqrt
-from flask import Flask,request
-from werkzeug.wrappers import Request,Response
 import random
 
 def mongo_config(config,prefix='MONGODB_'):
@@ -67,33 +64,6 @@ def listMatches(pref_mapping,person_name,n=20,sim_func=sim_pearson):
     scores.reverse()
     return scores
 
-if not checkCache():
-    buildCache()
-    makeCritics()
-mapped = most_prolific()
-
-app = Flask(__name__)
-
-
-@app.route('/')
-def root():
-    return Response('foo')
-
-@app.route('/<critic>')
-def critic(critic):
-    resp_string = json.dumps(mapped[critic],indent=4)
-    return Response(resp_string,mimetype='application/json')
-
-@app.route('/<critic>/similarity')
-def critic_similarity_matrix(critic):
-    resp_string = json.dumps(dict([(key,value) for value,key in listMatches(mapped,critic)]),indent=4)
-    return Response(resp_string,mimetype='application/json')
-
-@app.route('/<critic>/<other_critic>')
-def compare(critic,other_critic):
-    matrix = dict([(key,value) for value,key in listMatches(mapped,critic)])
-    return Response(json.dumps(matrix[other_critic]),mimetype='application/json')
-
 def getRecsWeighted(mapping,critic_name,sim_func=sim_pearson):
     # (rating * critic similarity)/sum(critic_similarities for title) for weighted score
     totals = {}
@@ -113,11 +83,9 @@ def getRecsWeighted(mapping,critic_name,sim_func=sim_pearson):
     return rankings
 
 
-@app.route('/<critic>/would_like')
-def would_like(critic):
-    recommendations = getRecsWeighted(mapped,critic)
-    return Response(json.dumps(recommendations,indent=4),mimetype='application/json')
+if not checkCache():
+    buildCache()
+    makeCritics()
+mapped = most_prolific()
 
-if __name__ == '__main__':
-    app.debug = True
-    app.run()
+
