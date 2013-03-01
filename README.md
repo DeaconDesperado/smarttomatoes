@@ -3,5 +3,6 @@
 A simple POC using the Rotten Tomatoes API to compare Top Movie Critics and their commonality to one another.
 
 Uses the Pearson Similarity Metric:
-[!equation]('http://path-to-equation')
+
+![image]('http://snips.deacondesperado.com/rtapi/pear.gif')
 
