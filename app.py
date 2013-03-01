@@ -8,6 +8,7 @@ import minimongo
 from math import sqrt
 from flask import Flask,request
 from werkzeug.wrappers import Request,Response
+import random
 
 def mongo_config(config,prefix='MONGODB_'):
     attrs = config.__dict__.iteritems()
@@ -92,6 +93,21 @@ def critic_similarity_matrix(critic):
 def compare(critic,other_critic):
     matrix = dict([(key,value) for value,key in listMatches(mapped,critic)])
     return Response(json.dumps(matrix[other_critic]),mimetype='application/json')
+
+@app.route('/<critic>/would_like')
+def would_like(critic):
+    critic_seen = Set([key for key in mapped[critic].keys()])
+    most_like = [matrix[1] for matrix in listMatches(mapped,critic,n=3)]
+    picked_critic = Critic.collection.find_one({'_id':re.sub('_',' ',random.choice(most_like)).title()})
+    other_reviews = Set([rev['movie_id'] for rev in picked_critic.ratings])
+    havent_seen = list(critic_seen - other_reviews)
+    movies = []
+    for i in xrange(int(request.values.get('num',3))):
+        title = random.choice(havent_seen)
+        movies.append(Movie.collection.find_one({'_id':title}))
+    return Response(json.dumps(movies,indent=4),mimetype='application/json')
+    
+
 
 if __name__ == '__main__':
     app.debug = True
