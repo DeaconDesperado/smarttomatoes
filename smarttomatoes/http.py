@@ -14,6 +14,7 @@ setup()
 mapped = most_prolific()
 next_index = Queue()
 
+#TODO: These tasks should be redis pubsub
 def indexTask(queue,cancel):
     while not cancel.isSet():
         sleep(60)
