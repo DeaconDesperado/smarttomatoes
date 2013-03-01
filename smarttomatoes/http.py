@@ -1,4 +1,4 @@
-from rtint import mapped,listMatches,getRecsWeighted
+from smarttomatoes import mapped,listMatches,getRecsWeighted
 from flask import Flask,request
 from werkzeug.wrappers import Request,Response
 import json
