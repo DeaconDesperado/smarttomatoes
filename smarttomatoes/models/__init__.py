@@ -73,7 +73,6 @@ class Review(Model):
         return review
 
     def convert_rating(self):
-       
         try:
             if '/' in self['original_score']:
                 numerator,denominator = self['original_score'].split('/')
