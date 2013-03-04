@@ -19,13 +19,12 @@ next_index = Queue()
 def indexTask(queue,cancel,redis_con):
     pubsub = redis_con.pubsub()
     pubsub.subscribe('smarttomatoes')
-    while not cancel.isSet():
-        for msg in pubsub.listen():
-            if msg['data']=='C|KILL':
-                cancel.set()
-                break;
-            setup()
-            queue.put(most_prolific())
+    for msg in pubsub.listen():
+        if msg['data']=='C|KILL':
+            cancel.set()
+            break;
+        setup()
+        queue.put(most_prolific())
 
 def rebuild():
     try:

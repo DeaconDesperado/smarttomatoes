@@ -5,9 +5,10 @@ from config import Config
 from rottentomatoes import RT
 from time import sleep
 from pymongo.errors import DuplicateKeyError
+import redis
 
 rtapi = RT(Config.API_KEY)
-
+#redis_con = redis.Redis(Config.REDIS_HOST,Config.REDIS_PORT)
 
 class Critic(Model):
     class Meta:
@@ -72,8 +73,20 @@ class Review(Model):
         return review
 
     def convert_rating(self):
-        #TODO: also calculate A-F ratings numerically as well
-        return float(float(self['original_score'].split('/')[0])/4)
+       
+        try:
+            if '/' in self['original_score']:
+                numerator,denominator = self['original_score'].split('/')
+                return float(numerator)/float(denominator) 
+            else:
+                raise ValueError()
+        except ValueError:
+            mod = 0
+            if '+' in self['original_score']:
+                mod += .0769230
+            elif '-' in self['original_score']:
+                mod -= .0769230
+            return ('FDCBA'.index(self['original_score'].rstrip('+-')))*(3*.0769230)+mod 
 
 
 def checkCache():
@@ -96,9 +109,9 @@ def buildCache():
             for review in reviews['reviews']:
                 try:
                     review = Review.create(review,movie._id)
-                except (KeyError,ValueError,IndexError):
+                except KeyError:
                     continue
-                print 'Saving review from %s' % review.get('critic','Nobody')
+                print 'Saving review from %s rated %f/1' % (review.get('critic','Nobody'), review.rating)
                 try:
                     review.save(safe=True)
                     sleep(1)
@@ -117,5 +130,4 @@ def makeCritics():
         critic = Critic.collection.find_one({'_id':review['critic']})
         critic.prevalence = len(critic.ratings)
         critic.save()
-
 
