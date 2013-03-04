@@ -8,19 +8,24 @@ from tornado.web import FallbackHandler, RequestHandler, Application
 from threading import Thread,Event
 from Queue import Queue,Empty
 from time import sleep
+from redis import Redis
+
 app = Flask(__name__)
 
 setup()
 mapped = most_prolific()
 next_index = Queue()
 
-#TODO: These tasks should be redis pubsub
-def indexTask(queue,cancel):
+def indexTask(queue,cancel,redis_con):
+    pubsub = redis_con.pubsub()
+    pubsub.subscribe('smarttomatoes')
     while not cancel.isSet():
-        sleep(60)
-        setup()
-        queue.put(most_prolific())
-
+        for msg in pubsub.listen():
+            if msg['data']=='C|KILL':
+                cancel.set()
+                break;
+            setup()
+            queue.put(most_prolific())
 
 def rebuild():
     try:
@@ -28,7 +33,6 @@ def rebuild():
         mapped = new_data
     except Empty:
         pass
-    
 
 @app.route('/')
 def root():
@@ -64,12 +68,13 @@ if __name__ == '__main__':
     application.listen(5000)
     io = IOLoop.instance()
     cancel = Event()
-    index_watcher = Thread(target=indexTask,args=(next_index,cancel))
+    redis_con = Redis()
+    index_watcher = Thread(target=indexTask,args=(next_index,cancel,redis_con))
     index_watcher.start()
     try:
         PeriodicCallback(rebuild,1000,io).start()
         io.start()
     except KeyboardInterrupt,Exception:
         print 'setting cancel event'
+        redis_con.publish('smarttomatoes','C|KILL')
         cancel.set()
-        #shutdown
