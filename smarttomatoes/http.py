@@ -1,5 +1,5 @@
 from smarttomatoes import listMatches,getRecsWeighted,setup,most_prolific
-from flask import Flask,request,g
+from flask import Flask,request,g,render_template
 from werkzeug.wrappers import Request,Response
 import json
 from tornado.wsgi import WSGIContainer
@@ -36,7 +36,7 @@ def rebuild():
 
 @app.route('/')
 def root():
-    return Response('foo')
+    return render_template('root.html')
 
 @app.route('/<critic>')
 def critic(critic):
@@ -48,11 +48,14 @@ def critic_similarity_matrix(critic):
     resp_string = json.dumps(dict([(key,value) for value,key in listMatches(mapped,critic)]),indent=4)
     return Response(resp_string,mimetype='application/json')
 
+@app.route('/favicon.ico')
+def favicon():
+    return Response('Not found',status=404)
+
 @app.route('/<critic>/<other_critic>')
 def compare(critic,other_critic):
     matrix = dict([(key,value) for value,key in listMatches(mapped,critic)])
     return Response(json.dumps(matrix[other_critic]),mimetype='application/json')
-
 
 @app.route('/<critic>/would_like')
 def would_like(critic):
